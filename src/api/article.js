@@ -32,3 +32,7 @@ export const articleAddService = (articleModel) => {
 export const articleDeleteService = (id) => {
     return request.delete('/article', { params: { id } })
 }
+//编辑文章信息
+export const ArticleUpdateService = (params) => {
+    return request.put('/article', params)
+}

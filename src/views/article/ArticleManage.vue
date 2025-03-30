@@ -3,9 +3,7 @@
         <template #header>
             <div class="header">
                 <span>文章管理</span>
-                <el-button type="primary" @click="
-                    visibleDrawer = true;
-                ">添加文章</el-button>
+                <el-button type="primary" @click="visibleDrawer = true;">添加文章</el-button>
             </div>
             <el-drawer v-model="visibleDrawer" size="50%" title="添加文章" direction="rtl">
                 <el-form label-width="100px" style="padding-right: 30px" :rules="rules" :model="articleModel">
@@ -77,13 +75,56 @@
             <el-table-column prop="state" label="状态" />
             <el-table-column label="操作" width="100">
                 <template #default="{ row }">
-                    <el-button type="success" :icon="Edit" circle plain />
+                    <el-button type="success" :icon="Edit" circle plain @click="showUpdate(row)" />
                     <el-button type="danger" :icon="Delete" circle plain @click="showDeleteCategory(row)" /></template>
             </el-table-column>
             <template #empty>
                 <el-empty description="没有数据" />
             </template>
         </el-table>
+        <!-- 编辑的弹窗 -->
+        <el-drawer v-model="visibleDrawerUpdate" size="50%" title="编辑文章" direction="rtl">
+            <el-form label-width="100px" style="padding-right: 30px" :rules="rules" :model="articleUpdateModel">
+                <el-form-item label="文章标题" prop="title">
+                    <el-input v-model="articleUpdateModel.title"></el-input>
+                </el-form-item>
+                <el-form-item label="文章分类">
+                    <el-select v-model="articleUpdateModel.categoryId" placeholder="请选择">
+                        <el-option v-for="c in categoryData" :key="c.id" :label="c.categoryName"
+                            :value="c.id"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="文章封面">
+                    <!-- 
+                            auto-upload:设置是否自动上传
+                            action:设置服务器接口路径
+                            name:设置上传文件的字段名
+                            headers:设置文件的上传请求头
+                            on-success:设置上传成功的回调函数
+                        -->
+
+                    <!-- action="#" :auto-upload="false" :on-change="handleFileChange"
+                            :show-file-list="true" :file-list="fileList" :on-remove="handleRemove" -->
+                    <el-upload class="avatar-uploader" :auto-upload="true" :show-file-list="false" action="/api/upload"
+                        name="file" :headers="{ 'Authorization': TokenStore.token }" :on-success="uploadSuccess">
+                        <img v-if="articleUpdateModel.coverImg" :src="articleUpdateModel.coverImg" class="avatar" />
+                        <el-icon v-else class="avatar-uploader-icon">
+                            <Plus />
+                        </el-icon>
+                    </el-upload>
+                </el-form-item>
+                <el-form-item label="文章内容">
+                    <div class="editor">
+                        <quill-editor theme="snow" v-model:content="articleUpdateModel.content"
+                            contentType="html"></quill-editor>
+                    </div>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="UpdateArticle('已发布')">发布</el-button>
+                    <el-button type="info" @click="UpdateArticle('草稿')">草稿</el-button>
+                </el-form-item>
+            </el-form>
+        </el-drawer>
         <!-- 分页部分 -->
         <!-- 
         el-pagination 是 Element Plus 的分页组件
@@ -116,9 +157,10 @@
 import { ref } from 'vue';
 import { ElEmpty, ElMessage, ElMessageBox } from 'element-plus';
 import { Delete, Edit, Message } from "@element-plus/icons-vue";
-import { ArticleCategoryListService, ListArticleService, articleAddService, articleDeleteService } from '@/api/article';
+import { ArticleCategoryListService, ArticleUpdateService, ListArticleService, articleAddService, articleDeleteService } from '@/api/article';
 import { Plus } from '@element-plus/icons-vue'
 import { useTokenStore } from '@/stores/token';
+
 //token
 const TokenStore = useTokenStore();
 //图片的回调函数
@@ -127,26 +169,9 @@ const uploadSuccess = (result) => {
     console.log(result);
 
 }
-
-// const fileList = ref([]) // 新增文件列表
-
-// const handleRemove = (file) => {
-//     // 删除文件后的处理
-//     articleModel.value.coverImg = '' // 清空封面图片
-//     fileList.value = [] // 清空文件列表
-// }
-
-// const handleFileChange = (file) => {
-//     fileList.value = [file] // 更新文件列表
-//     const reader = new FileReader()
-//     reader.onload = (e) => {
-//         articleModel.value.coverImg = e.target.result
-//     }
-//     reader.readAsDataURL(file.raw)
-// }
-// ... existing code ...
 //控制抽屉的出现
 const visibleDrawer = ref(false)
+const visibleDrawerUpdate = ref(false)
 //用户搜索时选用的发布状态
 const state = ref('')
 //用户搜索时选用的文章id
@@ -235,6 +260,37 @@ const addArticle = async (state) => {
     //隐藏抽屉
     visibleDrawer.value = false
 }
+//编辑文字信息
+const showUpdate = (row) => {
+    visibleDrawerUpdate.value = true
+    articleUpdateModel.value = {
+        id: row.id,
+        title: row.title,
+        content: row.content,
+        coverImg: row.content,
+        categoryId: row.categoryId,
+    }
+}
+const UpdateArticle = async (state) => {
+    articleUpdateModel.value.state = state
+    let result = await ArticleUpdateService(articleUpdateModel.value);
+    ElMessage.success(result.message ? result.message : '添加成功')
+    //再次调用getArticles,获取文章
+    getAllArticle();
+    //隐藏抽屉
+    visibleDrawerUpdate.value = false
+}
+//编辑文字信息的数据模型
+const articleUpdateModel = ref(
+    {
+        id: "",
+        title: "",
+        content: "",
+        coverImg: "",
+        state: "",
+        categoryId: "",
+    }
+)
 //调用删除文章接口
 const showDeleteCategory = (row) => {
     ElMessageBox.confirm(
@@ -258,6 +314,8 @@ const showDeleteCategory = (row) => {
 
     })
 }
+
+
 </script>
 <style scoped lang="scss">
 .card {

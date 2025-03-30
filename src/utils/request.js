@@ -48,14 +48,34 @@ instance.interceptors.response.use(
                 message: '该用户名已经被注册',
                 type: 'error',
             })
-        }
-        else {
+        } else if (result.data.message === '旧密码不一致') {
             ElMessage({
                 showClose: true,
-                message: '操作失败',
+                message: '输入的旧密码与原密码不一致',
+                type: 'error',
+            })
+        } else if (result.data.message === '新密码与确认密码不一致') {
+            ElMessage({
+                showClose: true,
+                message: '新密码与确认密码不一致',
+                type: 'error',
+            })
+        } else if (result.data.message === '新密码与旧密码一致') {
+            ElMessage({
+                showClose: true,
+                message: '新密码与旧密码一致',
                 type: 'error',
             })
         }
+
+
+        // else {
+        //     ElMessage({
+        //         showClose: true,
+        //         message: '操作失败',
+        //         type: 'error',
+        //     })
+        // }
         return Promise.reject(err);//异步的状态转化成失败的状态
     },
     err => {

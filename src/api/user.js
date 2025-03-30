@@ -24,3 +24,7 @@ export const userInfoService = () => {
 export const userUpdateSercice = (userData) => {
     return request.put('/user/update', userData)
 }
+//修改用户的密码
+export const userUpdatePwdService = (pswData) => {
+    return request.patch('/user/updatePwd', pswData)
+}
